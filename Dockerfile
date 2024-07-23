@@ -1,10 +1,34 @@
-FROM rxyxxy/jige:xr
-ENV JCNAME=V2board
-ENV JCAPIHOST=https://go.166660.xyz
-ENV JCAPIKEY=2Lb72ZtjrpgJk00yso
-ENV JCNODEID=3
+# FROM rxyxxy/jige:xr
+# ENV JCNAME=V2board
+# ENV JCAPIHOST=https://go.166660.xyz
+# ENV JCAPIKEY=2Lb72ZtjrpgJk00yso
+# ENV JCNODEID=3
 
-EXPOSE 80
+# EXPOSE 80
 
-CMD ["./main.sh"]
+# CMD ["./main.sh"]
 
+FROM node:18-alpine AS builder
+ 
+WORKDIR /app
+COPY . .
+ 
+## The `BUILDTIME_ENV_EXAMPLE` here will be set before building automatically
+ARG BUILDTIME_ENV_EXAMPLE
+ENV BUILDTIME_ENV_EXAMPLE=${BUILDTIME_ENV_EXAMPLE}
+ 
+RUN npm install && \
+    npm run build
+ 
+FROM nginx:alpine
+ 
+COPY nginx.conf /etc/nginx/conf.d/configfile.template
+COPY --from=builder /app/dist /usr/share/nginx/html
+ 
+ENV \
+    PORT=8080 \
+    HOST=0.0.0.0
+ 
+EXPOSE 8080
+ 
+CMD sh -c "envsubst '\$PORT' < /etc/nginx/conf.d/configfile.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
